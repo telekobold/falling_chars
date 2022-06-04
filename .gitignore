@@ -1,0 +1,7 @@
+# Ignore all files without file name extensions:
+*
+!/**/
+!*.*
+
+*.o
+test_file.txt
