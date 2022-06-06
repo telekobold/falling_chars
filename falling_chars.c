@@ -1,10 +1,9 @@
 #include <stdio.h>
 #include <ncurses.h>
 
-int width;
-int height;
-
-void get_chars();
+unsigned width; // = number of columns
+unsigned height;
+char **window_columns;
 
 // Reads in the content of the file with the passed filename and prints it 
 // to the screen.
@@ -34,7 +33,6 @@ int main(int argc, char *argv[])
     */
     initscr(); // Start ncurses mode
     
-    const char *filename = "test_file.txt";
     width = getmaxx(stdscr);
     height = getmaxy(stdscr);
     def_prog_mode(); // Save the current terminal content
@@ -44,8 +42,30 @@ int main(int argc, char *argv[])
     getchar();
     reset_prog_mode(); // Restore the saved terminal content
     refresh();
-    print_file_to_screen(filename);
     
-    getch(); // Wait for user input so that the input is shown on the screen
-    endwin(); // End ncurses mode
+    const char *filename = "test_file.txt";
+    print_file_to_screen(filename);
+    getch();
+    
+    //clear(); // Would lead to that nothing would be printed in the following
+               // lines:
+    for(int i = 0; i < height; i++){
+        for(int j = 0; j < width; j++){
+            chtype mvinch_return = mvinch(i,j);
+            char mvinch_char = mvinch_return & A_CHARTEXT;
+            //window_columns[i][j] = mvinch_char;
+            def_prog_mode();
+            endwin();
+            //putchar(window_columns[i][j]);
+            putchar(mvinch_char);
+            reset_prog_mode();
+            refresh();
+        }
+        def_prog_mode();
+        endwin();
+        putchar('\n');
+        reset_prog_mode();
+        refresh();
+    }
+    endwin();
 }
