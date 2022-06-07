@@ -12,7 +12,8 @@ unsigned height;
 
 // Reads in the content of the file with the passed filename and prints it 
 // to the screen.
-int print_file_to_screen(const char *filename, FILE *test_output_file)
+//int print_file_to_screen(const char *filename, FILE *test_output_file)
+int print_file_to_screen(const char *filename)
 {
     FILE *textfile;
     textfile = fopen(filename, "r");
@@ -24,11 +25,29 @@ int print_file_to_screen(const char *filename, FILE *test_output_file)
         {
             //printf("%s", line);
             printw("%s", line);
+            
             // Control output:
+            def_prog_mode();
+            endwin();
+            printf("%s", line);
+            reset_prog_mode();
+            refresh();
+            /*
+            def_prog_mode();
+            endwin();
             fprintf(test_output_file, "%s", line);
+            reset_prog_mode();
+            refresh();
+            */
         }
     }
+    /*
+    def_prog_mode();
+    endwin();
     fprintf(test_output_file, "\n");
+    reset_prog_mode();
+    refresh();
+    */
 }
 
 int main(int argc, char *argv[])
@@ -62,7 +81,8 @@ int main(int argc, char *argv[])
     reset_prog_mode(); // Restore the saved terminal content
     refresh();
     
-    print_file_to_screen(filename, test_output_file);
+    //print_file_to_screen(filename, test_output_file);
+    print_file_to_screen(filename);
     getch();
     Pos_tuple window_columns[width][height];
     
@@ -77,6 +97,11 @@ int main(int argc, char *argv[])
             //char mvinch_char = mvinch_return & A_CHARTEXT;
             char c = mvinch(j,i) & A_CHARTEXT;
             if(c != ' '){
+                def_prog_mode();
+                endwin();
+                printf("Detected non-space char %c\n", c);
+                reset_prog_mode();
+                refresh();
                 non_space_char_count++;
                 Pos_tuple tuple = {i, j, c};
                 window_columns[i][j] = tuple;
@@ -95,6 +120,14 @@ int main(int argc, char *argv[])
     printf("The window contains %d non-space chars.\n", non_space_char_count);
     printf("The window contains %d spaces.\n", space_count);
     
+    for(int i = 0; i < 3; i++){
+        for(int j = 0; j < 21; j++){
+            char c = mvinch(i,j) & A_CHARTEXT;
+            printf("mvinch(%d, %d) = %c\n", i ,j, c);
+        }
+    }
+    
+    /*
     if (test_output_file != NULL){
         for(int i = 0; width; i++){
             for(int j = 0; window_columns[i][j].x != -1 && window_columns[i][j].y != -1 && window_columns[i][j].c != '\0'; j++){
@@ -104,6 +137,7 @@ int main(int argc, char *argv[])
             }
         }
     }
+    */
     //printf("linecount = %d\n", linecount);
     
     /*
