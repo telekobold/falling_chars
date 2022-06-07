@@ -12,7 +12,7 @@ unsigned height;
 
 // Reads in the content of the file with the passed filename and prints it 
 // to the screen.
-int print_file_to_screen(const char *filename)
+int print_file_to_screen(const char *filename, FILE *test_output_file)
 {
     FILE *textfile;
     textfile = fopen(filename, "r");
@@ -24,8 +24,11 @@ int print_file_to_screen(const char *filename)
         {
             //printf("%s", line);
             printw("%s", line);
+            // Control output:
+            fprintf(test_output_file, "%s", line);
         }
     }
+    fprintf(test_output_file, "\n");
 }
 
 int main(int argc, char *argv[])
@@ -38,18 +41,28 @@ int main(int argc, char *argv[])
     */
     initscr(); // Start ncurses mode
     
+    // Control output:
+    const char *filename = "test_file_2.txt";
+    const char *test_output_filename = "test_output.txt";
+    FILE *test_output_file;
+    test_output_file = fopen(test_output_filename, "w");
+    unsigned linecount = 0;
+    
     width = getmaxx(stdscr);
     height = getmaxy(stdscr);
     def_prog_mode(); // Save the current terminal content
     endwin();
     printf("width = %d\n", width);
     printf("height = %d\n", height);
+    if (test_output_file != NULL){
+        fprintf(test_output_file, "width = %d\n", width);
+        fprintf(test_output_file, "height = %d\n", height);
+    }
     getchar();
     reset_prog_mode(); // Restore the saved terminal content
     refresh();
     
-    const char *filename = "test_file_2.txt";
-    print_file_to_screen(filename);
+    print_file_to_screen(filename, test_output_file);
     getch();
     Pos_tuple window_columns[width][height];
     
@@ -81,6 +94,17 @@ int main(int argc, char *argv[])
     // expected: 36
     printf("The window contains %d non-space chars.\n", non_space_char_count);
     printf("The window contains %d spaces.\n", space_count);
+    
+    if (test_output_file != NULL){
+        for(int i = 0; width; i++){
+            for(int j = 0; window_columns[i][j].x != -1 && window_columns[i][j].y != -1 && window_columns[i][j].c != '\0'; j++){
+                printf("Char at position (%d, %d): %c\n", window_columns[i][j].x, window_columns[i][j].y, window_columns[i][j].c);
+                fprintf(test_output_file, "Char at position (%d, %d): %c\n", window_columns[i][j].x, window_columns[i][j].y, window_columns[i][j].c);
+                //linecount++;
+            }
+        }
+    }
+    //printf("linecount = %d\n", linecount);
     
     /*
     // Control output:
