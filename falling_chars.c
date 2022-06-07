@@ -1,9 +1,14 @@
 #include <stdio.h>
 #include <ncurses.h>
 
+typedef struct {
+    int x;
+    int y;
+    char c; // only for testing purposes
+} Pos_tuple;
+
 unsigned width; // = number of columns
 unsigned height;
-char **window_columns;
 
 // Reads in the content of the file with the passed filename and prints it 
 // to the screen.
@@ -43,23 +48,65 @@ int main(int argc, char *argv[])
     reset_prog_mode(); // Restore the saved terminal content
     refresh();
     
-    const char *filename = "test_file.txt";
+    const char *filename = "test_file_2.txt";
     print_file_to_screen(filename);
     getch();
+    Pos_tuple window_columns[width][height];
     
     //clear(); // Would lead to that nothing would be printed in the following
                // lines:
-    for(int i = 0; i < height; i++){
-        for(int j = 0; j < width; j++){
-            chtype mvinch_return = mvinch(i,j);
-            char mvinch_char = mvinch_return & A_CHARTEXT;
-            //window_columns[i][j] = mvinch_char;
-            def_prog_mode();
-            endwin();
-            //putchar(window_columns[i][j]);
-            putchar(mvinch_char);
-            reset_prog_mode();
-            refresh();
+    int non_space_char_count = 0;
+    int space_count = 0;
+    for(int i = 0; i < width; i++){
+        int j = 0;
+        for(; j < height; j++){
+            chtype mvinch_return = mvinch(j,i); // j,i
+            //char mvinch_char = mvinch_return & A_CHARTEXT;
+            char c = mvinch(j,i) & A_CHARTEXT;
+            if(c != ' '){
+                non_space_char_count++;
+                Pos_tuple tuple = {i, j, c};
+                window_columns[i][j] = tuple;
+            } else {
+                space_count++;
+            }
+        }
+        if(j < height){
+            Pos_tuple tuple = {-1, -1, '\0'};
+            window_columns[i][j] = tuple;
+        }
+    }
+    endwin();
+    // Control output:
+    // expected: 36
+    printf("The window contains %d non-space chars.\n", non_space_char_count);
+    printf("The window contains %d spaces.\n", space_count);
+    
+    /*
+    // Control output:
+    def_prog_mode();
+    endwin();
+    for(int i = 0; i < width; i++){
+        for(int j = 0; j < height; j++){
+            if(window_columns[i][j].x == -1){
+                break;
+            }
+            putchar(window_columns[i][j].c);
+        }
+    }
+    */
+    /*
+    // Control output:
+    for(int i = 0; i < width; i++){
+        for(int j = 0; j < height; j++){
+            if (window_columns[i][j].x != -1){
+                char c = mvinch(j,i) & A_CHARTEXT;
+                def_prog_mode();
+                endwin();
+                putchar(c);
+                reset_prog_mode();
+                refresh();
+            }
         }
         def_prog_mode();
         endwin();
@@ -67,5 +114,5 @@ int main(int argc, char *argv[])
         reset_prog_mode();
         refresh();
     }
-    endwin();
+    */
 }
