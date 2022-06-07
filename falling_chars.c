@@ -37,9 +37,13 @@ void print_file_to_screen(const char *filename)
 }
 
 // Takes a char at an existing position on the standard window and lets it 
-// "fall down" until the char reached the bottom of the window.
+// "fall down" until the char reached the bottom of the window or a stack of
+// one or more already fallen down characters at the bottom of the window.
 void let_char_fall_down(Pos_tuple char_pos){
     for(int i = 0; char_pos.y+i < height-1; i++){
+        char next_char = mvinch(char_pos.y+i+1,char_pos.x) & A_CHARTEXT;
+        if (next_char != ' ')
+            break;
         mvaddch(char_pos.y+i, char_pos.x, ' ');
         mvaddch(char_pos.y+i+1, char_pos.x, char_pos.c);
         refresh();
@@ -122,7 +126,7 @@ int main(int argc, char *argv[])
         //for(int i = 0; width; i++){
         for(i = 0; i < 21; i++){
             //for(int j = 0; window_columns[i][j].x != -1 && window_columns[i][j].y != -1 && window_columns[i][j].c != '\0'; j++){
-            for(j = 0; j < 2; j++){
+            for(j = 1; j >=0; j--){
                 let_char_fall_down(window_columns[i][j]);
                 //printf("Char at position (%d, %d) = %c\n", window_columns[i][j].x, window_columns[i][j].y, window_columns[i][j].c);
                 //fprintf(test_output_file, "Char at position (%d, %d): %c\n", window_columns[i][j].x, window_columns[i][j].y, window_columns[i][j].c);
@@ -138,5 +142,6 @@ int main(int argc, char *argv[])
         }
     }
     */
-    endwin();
+    pause(); // Sleep forever, e.g. until Ctrl. + C is activated.
+    //endwin();
 }
