@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <time.h>
+#include <vector>
 
 #define SLEEP usleep(9000)
 
@@ -85,14 +86,15 @@ int main(int argc, char *argv[])
     const char *filename = "test_file_2.txt";
     width = getmaxx(stdscr); // = number of columns
     height = getmaxy(stdscr);
-    Pos_tuple window_columns[width][height];
+    Pos_tuple null_tuple = {-1, -1, '\0'};
+    std::vector<std::vector<Pos_tuple>> window_columns(width, std::vector<Pos_tuple>(height, null_tuple));
     
     print_file_to_screen(filename);
     
     unsigned i = 0, j = 0;
-    for(; i < width; i++)
+    for(; i < width; i++) // i < width
     {
-        for(j = 0; j < height; j++)
+        for(j = 0; j < height; j++) // j < height
         {
             char c = mvinch(j,i) & A_CHARTEXT;
             if(c != ' ')
@@ -101,22 +103,44 @@ int main(int argc, char *argv[])
                 window_columns[i][j] = tuple;
             }
         }
-        if(j < height)
+    }
+    
+    endwin();
+    printf("window_columns.size() = %d\n", window_columns.size());
+    for(i = 0; i < window_columns.size(); i++)
+    {
+        printf("window_columns[%d].size() = %d\n", i, window_columns[i].size());
+        for(j = 0; j < height; j++)
         {
-            Pos_tuple tuple = {-1, -1, '\0'};
-            window_columns[i][j] = tuple;
+            printf("window_columns[%d][%d].x = %d\n", i, j, window_columns[i][j].x);
+            printf("window_columns[%d][%d].y = %d\n", i, j, window_columns[i][j].y);
+            printf("window_columns[%d][%d].c = %c\n", i, j, window_columns[i][j].c);
         }
     }
     
+    /*
+    for(i = height-1; i >= 0; i--)
+    {
+        unsigned n = width;
+        unsigned n_rand_numbers[n];
+        get_n_rand_numbers(n, n_rand_numbers);
+        for(j = 0; j < width; j++)
+            if(window_columns[i][j].x != null_tuple.x && window_columns[i][j].y != null_tuple.y && window_columns[i][j].c != null_tuple.c)
+                let_char_fall_down(window_columns[n_rand_numbers[i]][j]);
+    }
+    */
     
+    /*
     for(i = 1; i >= 0; i--)
     {
         unsigned n = 21;
         unsigned n_rand_numbers[n];
         get_n_rand_numbers(n, n_rand_numbers);
         for(j = 0; j < n; j++)
-            let_char_fall_down(window_columns[n_rand_numbers[j]][i]);
+            let_char_fall_down(window_columns[n_rand_numbers[i]][j]); // [j][i]
     }
-    pause(); // Sleep forever, e.g. until Ctrl. + C is activated.
+    */
+    
+    //pause(); // Sleep forever, e.g. until Ctrl. + C is activated.
     //endwin();
 }
