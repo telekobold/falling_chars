@@ -5,7 +5,9 @@
 #include <time.h>
 #include <vector>
 
-#define SLEEP usleep(9000)
+//#define SLEEP usleep(9000)
+//#define SLEEP usleep(60000)
+#define SLEEP usleep(3000)
 
 typedef struct
 {
@@ -83,40 +85,70 @@ int main(int argc, char *argv[])
 {
     initscr(); // Start ncurses mode
     
-    const char *filename = "test_file_2.txt";
+    const char *filename = "test_file.txt";
     width = getmaxx(stdscr); // = number of columns
     height = getmaxy(stdscr);
-    Pos_tuple null_tuple = {-1, -1, '\0'};
-    std::vector<std::vector<Pos_tuple>> window_columns(width, std::vector<Pos_tuple>(height, null_tuple));
+    //Pos_tuple null_tuple = {-1, -1, '\0'};
+    //std::vector<std::vector<Pos_tuple>> window_columns(width, std::vector<Pos_tuple>(height, null_tuple));
+    std::vector<std::vector<Pos_tuple>> window_columns(width);
+    
+    std::vector<Pos_tuple> one = {{0,0,'a'}, {0,1,'b'}};
+    std::vector<Pos_tuple> two = {{3,1,'f'}};
+    window_columns[0] = one;
+    window_columns[1] = two;
     
     print_file_to_screen(filename);
     
     unsigned i = 0, j = 0;
-    for(; i < width; i++) // i < width
+    for(; i < width; i++)
     {
-        for(j = 0; j < height; j++) // j < height
+        std::vector<Pos_tuple> column;
+        for(j = 0; j < height; j++)
         {
             char c = mvinch(j,i) & A_CHARTEXT;
             if(c != ' ')
             {
                 Pos_tuple tuple = {i, j, c};
-                window_columns[i][j] = tuple;
+                column.push_back(tuple);
             }
         }
+        window_columns[i] = column;
     }
     
+    /*
     endwin();
     printf("window_columns.size() = %d\n", window_columns.size());
     for(i = 0; i < window_columns.size(); i++)
     {
         printf("window_columns[%d].size() = %d\n", i, window_columns[i].size());
-        for(j = 0; j < height; j++)
+        for(j = 0; j < window_columns[i].size(); j++)
         {
             printf("window_columns[%d][%d].x = %d\n", i, j, window_columns[i][j].x);
             printf("window_columns[%d][%d].y = %d\n", i, j, window_columns[i][j].y);
             printf("window_columns[%d][%d].c = %c\n", i, j, window_columns[i][j].c);
         }
     }
+    */
+    
+    for(i = 0; i < window_columns.size(); i++)
+    {
+        for(j = 0; j < window_columns[i].size(); j++)
+        {
+            let_char_fall_down(window_columns[i][j]);
+        }
+    }
+    
+    /*
+    for(i = 0; i < window_columns.size(); i++)
+    {
+        unsigned n_rand_numbers[width];
+        get_n_rand_numbers(width, n_rand_numbers);
+        for(j = 0; j < window_columns[i].size(); j++)
+        {
+            let_char_fall_down(window_columns[i][n_rand_numbers[j]]);
+        }
+    }
+    */
     
     /*
     for(i = height-1; i >= 0; i--)
@@ -141,6 +173,6 @@ int main(int argc, char *argv[])
     }
     */
     
-    //pause(); // Sleep forever, e.g. until Ctrl. + C is activated.
-    //endwin();
+    pause(); // Sleep forever, e.g. until Ctrl. + C is activated.
+    endwin();
 }
