@@ -46,6 +46,11 @@ unsigned contains(const unsigned *numbers, const unsigned numbers_size, const un
 void get_n_rand_numbers(unsigned n, unsigned *rand_numbers)
 {
     if(n <= 0)
+        def_prog_mode(); // Save the current terminal content
+        endwin();
+        printf("n_rand_numbers(): n is less than or equal to 0!");
+        reset_prog_mode(); // Restore the saved terminal content
+        refresh();
         rand_numbers = NULL;
     srand((unsigned) time(0)); // Seed rand()'s random number generator
     unsigned lower = 0, upper = n;
@@ -85,15 +90,41 @@ int main(int argc, char *argv[])
     const char *filename = "test_file_2.txt";
     width = getmaxx(stdscr); // = number of columns
     height = getmaxy(stdscr);
+    unsigned column_wise_num_of_chars[width];
     Pos_tuple window_columns[width][height];
     
     print_file_to_screen(filename);
     
+    // Check how many chars are on the standard ncurses window (stdscr):
     unsigned i = 0, j = 0;
     for(; i < width; i++)
     {
+        unsigned num_of_chars = 0;
         for(j = 0; j < height; j++)
         {
+            char c = mvinch(j,i) & A_CHARTEXT;
+            if(c != ' ')
+                num_of_chars++;
+        }
+        column_wise_num_of_chars[i] = num_of_chars;
+    }
+    /*
+    endwin();
+    printf("width = %d\n", width);
+    for(i = 0; i < width; i++)
+        printf("column_wise_num_of_chars[%d] = %d\n",i, column_wise_num_of_chars[i]);
+    */
+    
+    //endwin();
+    // Use the previously calculated `column_wise_num_of_chars` to produce no
+    // overflow when reading and writing chars on stdscr:
+    for(i = 0; i < width; i++)
+    {
+        //printf("Column %d: ", i);
+        for(j = 0; j < column_wise_num_of_chars[i]; j++)
+        {
+            //printf("(i=%d, j=%d)  ", i, j);
+            
             char c = mvinch(j,i) & A_CHARTEXT;
             if(c != ' ')
             {
@@ -101,14 +132,24 @@ int main(int argc, char *argv[])
                 window_columns[i][j] = tuple;
             }
         }
-        if(j < height)
-        {
-            Pos_tuple tuple = {-1, -1, '\0'};
-            window_columns[i][j] = tuple;
-        }
+        //putchar('\n');
     }
     
+    for(i = 0; i < width; i++)
+    {
+        unsigned n = column_wise_num_of_chars[i];
+        if (n <= 0)
+            continue;
+        unsigned n_rand_numbers[n];
+        get_n_rand_numbers(n, n_rand_numbers);
+        //for(j = n; j >= 0; j--)
+        //    let_char_fall_down(window_columns[n_rand_numbers[j]][i]);
+    }
+    getch();
+    endwin();
+    //pause();
     
+    /*
     for(i = 1; i >= 0; i--)
     {
         unsigned n = 21;
@@ -118,5 +159,5 @@ int main(int argc, char *argv[])
             let_char_fall_down(window_columns[n_rand_numbers[j]][i]);
     }
     pause(); // Sleep forever, e.g. until Ctrl. + C is activated.
-    //endwin();
+    */
 }
