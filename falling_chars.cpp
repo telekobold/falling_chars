@@ -5,22 +5,24 @@
 #include <time.h>
 #include <vector>
 
-//#define SLEEP usleep(9000)
+#define SLEEP usleep(9000)
 //#define SLEEP usleep(60000)
-#define SLEEP usleep(3000)
+//#define SLEEP usleep(3000)
 
 typedef struct
 {
-    int x; // The char's x position on the ncurses window
-    int y; // The char's y position on the ncurses window
-    char c; // The char's value
+    unsigned x; // The char's x position on the ncurses window
+    unsigned y; // The char's y position on the ncurses window
+    char c;     // The char's value
+    bool can_still_fall_down = true;
 } Pos_tuple;
+
 unsigned width;
 unsigned height;
+unsigned cannot_fall_down_count = 0;
 
 // Reads in the content of the file with the passed filename and prints it 
 // to the screen.
-//int print_file_to_screen(const char *filename, FILE *test_output_file)
 void print_file_to_screen(const char *filename)
 {
     FILE *textfile;
@@ -63,22 +65,45 @@ void get_n_rand_numbers(unsigned n, unsigned *rand_numbers)
 }
 
 // Takes a char at an existing position on the standard window and lets it 
-// "fall down" until the char reached the bottom of the window or a stack of
-// one or more already fallen down characters at the bottom of the window.
-void let_char_fall_down(Pos_tuple char_pos)
+// "fall down" until the char reached the bottom of the window or the top of 
+// a stack of one or more characters. Also does some additional checks which
+// help to ensure that after a few iterations there is no space character 
+// between each char and the top.
+void let_char_fall_down(Pos_tuple *char_pos)
 {
-    for(unsigned i = 0; char_pos.y+i < height-1; i++)
+    if (not char_pos->can_still_fall_down)
+        return;
+    bool char_detected = false;
+    // Check if there is any space char between the char at the current position
+    // and the bottom of the window. If not, there will be no way for this char
+    // to fall down:
+    for(unsigned i = char_pos->y; i < height-1; i++)
     {
-        char next_char = mvinch(char_pos.y+i+1,char_pos.x) & A_CHARTEXT;
-        if (next_char != ' ')
+        char current_char = mvinch(i, char_pos->x) & A_CHARTEXT;
+        if (current_char == ' '){
+            char_detected = true;
             break;
-        // Overwrite the previous position of the char:
-        mvaddch(char_pos.y+i, char_pos.x, ' ');
-        // ...and write it one y-position ahead:
-        mvaddch(char_pos.y+i+1, char_pos.x, char_pos.c);
+        }
+    }
+    if(not char_detected)
+    {
+        char_pos->can_still_fall_down = true;
+        cannot_fall_down_count++;
+    }
+    
+    unsigned i = char_pos->y;
+    for(; i < height-1; i++)
+    {
+        char next_char = mvinch(i+1, char_pos->x) & A_CHARTEXT;
+        if(next_char != ' ')
+            break;
+        mvaddch(i, char_pos->x, ' ');
+        mvaddch(i+1, char_pos->x, char_pos->c);
         refresh();
         SLEEP;
     }
+    // Update the y position of the char in the char_positions array:
+    char_pos->y = i;
 }
 
 int main(int argc, char *argv[])
@@ -88,91 +113,50 @@ int main(int argc, char *argv[])
     const char *filename = "test_file.txt";
     width = getmaxx(stdscr); // = number of columns
     height = getmaxy(stdscr);
-    //Pos_tuple null_tuple = {-1, -1, '\0'};
-    //std::vector<std::vector<Pos_tuple>> window_columns(width, std::vector<Pos_tuple>(height, null_tuple));
-    std::vector<std::vector<Pos_tuple>> window_columns(width);
-    
-    std::vector<Pos_tuple> one = {{0,0,'a'}, {0,1,'b'}};
-    std::vector<Pos_tuple> two = {{3,1,'f'}};
-    window_columns[0] = one;
-    window_columns[1] = two;
+    //std::vector<std::vector<Pos_tuple>> window_columns(width);
+    std::vector<Pos_tuple> char_positions;
     
     print_file_to_screen(filename);
     
     unsigned i = 0, j = 0;
     for(; i < width; i++)
     {
-        std::vector<Pos_tuple> column;
+        //std::vector<Pos_tuple> column;
         for(j = 0; j < height; j++)
         {
             char c = mvinch(j,i) & A_CHARTEXT;
             if(c != ' ')
             {
                 Pos_tuple tuple = {i, j, c};
-                column.push_back(tuple);
+                //column.push_back(tuple);
+                char_positions.push_back(tuple);
             }
         }
-        window_columns[i] = column;
+        //window_columns[i] = column;
     }
     
-    /*
-    endwin();
-    printf("window_columns.size() = %d\n", window_columns.size());
-    for(i = 0; i < window_columns.size(); i++)
+    unsigned n_rand_numbers[char_positions.size()];
+    get_n_rand_numbers(char_positions.size(), n_rand_numbers);
+    while(cannot_fall_down_count < char_positions.size())
     {
-        printf("window_columns[%d].size() = %d\n", i, window_columns[i].size());
-        for(j = 0; j < window_columns[i].size(); j++)
-        {
-            printf("window_columns[%d][%d].x = %d\n", i, j, window_columns[i][j].x);
-            printf("window_columns[%d][%d].y = %d\n", i, j, window_columns[i][j].y);
-            printf("window_columns[%d][%d].c = %c\n", i, j, window_columns[i][j].c);
-        }
+        /*
+        getch();
+        refresh();
+        def_prog_mode();
+        endwin();
+        printf("cannot_fall_down_count = %d\n", cannot_fall_down_count);
+        printf("char_positions.size() = %ld\n", char_positions.size());
+        getchar();
+        reset_prog_mode();
+        refresh();
+        */
+        for(i = 0; i < char_positions.size(); i++)
+            let_char_fall_down(&char_positions[n_rand_numbers[i]]);
     }
-    */
-    
-    for(i = 0; i < window_columns.size(); i++)
-    {
-        for(j = 0; j < window_columns[i].size(); j++)
-        {
-            let_char_fall_down(window_columns[i][j]);
-        }
-    }
-    
-    /*
-    for(i = 0; i < window_columns.size(); i++)
-    {
-        unsigned n_rand_numbers[width];
-        get_n_rand_numbers(width, n_rand_numbers);
-        for(j = 0; j < window_columns[i].size(); j++)
-        {
-            let_char_fall_down(window_columns[i][n_rand_numbers[j]]);
-        }
-    }
-    */
-    
-    /*
-    for(i = height-1; i >= 0; i--)
-    {
-        unsigned n = width;
-        unsigned n_rand_numbers[n];
-        get_n_rand_numbers(n, n_rand_numbers);
-        for(j = 0; j < width; j++)
-            if(window_columns[i][j].x != null_tuple.x && window_columns[i][j].y != null_tuple.y && window_columns[i][j].c != null_tuple.c)
-                let_char_fall_down(window_columns[n_rand_numbers[i]][j]);
-    }
-    */
-    
-    /*
-    for(i = 1; i >= 0; i--)
-    {
-        unsigned n = 21;
-        unsigned n_rand_numbers[n];
-        get_n_rand_numbers(n, n_rand_numbers);
-        for(j = 0; j < n; j++)
-            let_char_fall_down(window_columns[n_rand_numbers[i]][j]); // [j][i]
-    }
-    */
     
     pause(); // Sleep forever, e.g. until Ctrl. + C is activated.
+    // Will be never executed since the program is terminated before
+    // using Ctrl. + C:
     endwin();
+    printf("Terminated program.");
 }
