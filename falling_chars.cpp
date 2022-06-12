@@ -120,7 +120,6 @@ int main(int argc, char *argv[])
     const char *filename = "test_file.txt";
     width = getmaxx(stdscr); // = number of columns
     height = getmaxy(stdscr);
-    //std::vector<std::vector<Pos_tuple>> window_columns(width);
     std::vector<Pos_tuple> char_positions;
     
     print_file_to_screen(filename);
@@ -129,7 +128,6 @@ int main(int argc, char *argv[])
     // Collect all chars on the current window that are not ' ':
     for(; i < width; i++)
     {
-        //std::vector<Pos_tuple> column;
         for(j = 0; j < height; j++)
         {
             char c = mvinch(j,i) & A_CHARTEXT;
@@ -140,7 +138,6 @@ int main(int argc, char *argv[])
                 char_positions.push_back(tuple);
             }
         }
-        //window_columns[i] = column;
     }
     
     unsigned n_rand_numbers[char_positions.size()];
