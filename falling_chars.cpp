@@ -15,14 +15,19 @@
  */
 
 #include <stdio.h> // for printf
+#include <unistd.h> // for pause(), getlogin(), gethostname(), getcwd()
+#include <linux/limits.h> // for ARG_MAX
+#include <limits.h> // for PATH_MAX, HOST_NAME_MAX
+#include <regex> // for std::regex, std::regex_replace
 // for printw(), mvinch(), A_CHARTEXT(), mvaddch(), refresh(), initscr(),
 // getmaxx(), getmaxy(), entwin():
 #include <ncurses.h>
-#include <unistd.h> // for pause()
-#include <stdlib.h> // for rand(), srand()
+#include <stdlib.h> // for rand(), srand(), malloc()
 #include <time.h> // for time()
 #include <vector> // for std::vector
 
+// Derived from the NAME_REGEX definition from /usr/share/adduser/adduser.conf:
+#define NAME_REGEX = "^[a-z][-a-z0-9_]*"
 #define SLEEP usleep(9000)
 //#define SLEEP usleep(60000)
 //#define SLEEP usleep(2000)
@@ -38,6 +43,32 @@ typedef struct
 unsigned width;
 unsigned height;
 unsigned cannot_fall_down_count = 0;
+
+
+// --------------------------------------------------------------------------
+// ----------- reading console in- and output helper functions --------------
+// --------------------------------------------------------------------------
+
+// Reads the name of the logged in user, the host name and the current
+// working directory and prints a corresponding prompt.
+void print_current_prompt()
+{
+    char *username = getlogin();
+    char *hostname = (char *) malloc(HOST_NAME_MAX);
+    gethostname(hostname, HOST_NAME_MAX);
+    char *absolute_cwd = (char *) malloc(PATH_MAX);
+    getcwd(absolute_cwd, PATH_MAX);
+    std::regex home_dir_regex("/home/[a-zA-Z]*");
+    std::string cwd_cpp = std::regex_replace(absolute_cwd, home_dir_regex, "~");
+    const char *relative_cwd = cwd_cpp.c_str();
+    
+    printf("%s@%s %s $\n", username, hostname, relative_cwd);
+}
+
+
+// --------------------------------------------------------------------------
+// ------------------- falling chars helper functions -----------------------
+// --------------------------------------------------------------------------
 
 
 // Reads in the content of the file with the passed filename and prints it 
@@ -133,6 +164,11 @@ void let_char_fall_down(Pos_tuple *char_pos)
 
 int main(int argc, char *argv[])
 {
+    // Test output:
+    printf("The current bash prompt:\n");
+    print_current_prompt();
+    getchar();
+    
     initscr(); // Start ncurses mode
     
     const char *filename = "test_file.txt";
