@@ -14,12 +14,14 @@
  * SOFTWARE.
  */
 
-#include <stdio.h>
+#include <stdio.h> // for printf
+// for printw(), mvinch(), A_CHARTEXT(), mvaddch(), refresh(), initscr(),
+// getmaxx(), getmaxy(), entwin():
 #include <ncurses.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <time.h>
-#include <vector>
+#include <unistd.h> // for pause()
+#include <stdlib.h> // for rand(), srand()
+#include <time.h> // for time()
+#include <vector> // for std::vector
 
 #define SLEEP usleep(9000)
 //#define SLEEP usleep(60000)
