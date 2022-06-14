@@ -14,23 +14,23 @@
  * SOFTWARE.
  */
 
-#include <stdio.h> // for printf
-#include <unistd.h> // for pause(), getlogin(), gethostname(), getcwd()
+//#include <stdio.h> // for printf()
+//#include <stdlib.h> // for malloc()
+#include <unistd.h> // for getlogin(), gethostname(), getcwd()
 #include <linux/limits.h> // for ARG_MAX
 #include <limits.h> // for PATH_MAX, HOST_NAME_MAX
 #include <regex> // for std::regex, std::regex_replace
+#include <iostream> // for std::cout
 // for printw(), mvinch(), A_CHARTEXT(), mvaddch(), refresh(), initscr(),
 // getmaxx(), getmaxy(), entwin():
 #include <ncurses.h>
-#include <stdlib.h> // for rand(), srand(), malloc()
-#include <time.h> // for time()
-#include <vector> // for std::vector
+//#include <stdlib.h> // for rand(), srand(), malloc(), system()
+//#include <time.h> // for time()
+//#include <vector> // for std::vector
 
 // Derived from the NAME_REGEX definition from /usr/share/adduser/adduser.conf:
-#define NAME_REGEX "^[a-z][-a-z0-9_]*"
+#define HOME_DIR_REGEX "/home/[a-z][-a-z0-9_]*"
 #define SLEEP usleep(9000)
-//#define SLEEP usleep(60000)
-//#define SLEEP usleep(2000)
 
 typedef struct
 {
@@ -40,6 +40,7 @@ typedef struct
     bool can_still_fall_down = true;
 } Pos_tuple;
 
+unsigned line_count = 0; // Counts already printed lines
 unsigned width;
 unsigned height;
 unsigned cannot_fall_down_count = 0;
@@ -50,29 +51,67 @@ unsigned cannot_fall_down_count = 0;
 // --------------------------------------------------------------------------
 
 // Reads the name of the logged in user, the host name and the current
-// working directory and prints a corresponding prompt.
-void print_current_prompt()
+// working directory and returns a corresponding unix console prompt.
+std::string get_current_prompt()
 {
-    char *username = getlogin();
-    char *hostname = (char *) malloc(HOST_NAME_MAX);
-    gethostname(hostname, HOST_NAME_MAX);
+    // getlogin() returns the string as (char *) and must be converted:
+    std::string username = std::string(getlogin());
+    // gethostname needs a (char *), so the hostname must be converted to 
+    // std::string afterwards:
+    char *hostname_c = (char *) malloc(HOST_NAME_MAX);
+    gethostname(hostname_c, HOST_NAME_MAX);
+    std::string hostname = std::string(hostname_c);
     char *absolute_cwd = (char *) malloc(PATH_MAX);
     getcwd(absolute_cwd, PATH_MAX);
-    std::regex home_dir_regex(NAME_REGEX);
-    std::string cwd_cpp = std::regex_replace(absolute_cwd, home_dir_regex, "~");
-    const char *relative_cwd = cwd_cpp.c_str();
+    std::regex home_dir_regex(HOME_DIR_REGEX);
+    std::string relative_cwd = std::regex_replace(absolute_cwd, home_dir_regex, "~");
     
-    printf("%s@%s %s $ ", username, hostname, relative_cwd);
+    return username + "@" + hostname + " " + relative_cwd + " $ ";
 }
 
 
-// Waits for the user to type some console input and returns those input
-// as string (char array).
-char *retrieve_user_input()
+// Calls `get_current_prompt()` and both prints its return value to the console
+// and writes it to the passed file. Assumes that `file` is properly initialized.
+void print_current_prompt(FILE *file)
+{
+    std::string current_prompt = get_current_prompt();
+    std::cout << current_prompt;
+    // Convert current prompt from std::string to (char *) since fprintf
+    // needs (char *):
+    const char *current_prompt_c = current_prompt.c_str();
+    fprintf(file, "%s", current_prompt_c);
+    line_count++;
+}
+
+
+// Reads a command from the console, writes it to the passed file, executes it 
+// and prints its output to the console and to the passed file. Assumes that 
+// `file` is properly initialized.
+void read_and_execute_input(FILE *file)
 {
     char *input = (char *) malloc(ARG_MAX);
+    // Reads a command from the console:
     fgets(input, ARG_MAX, stdin);
-    return input;
+    // ...writes it to `file`:
+    fprintf(file, "%s", input);
+    line_count++;
+    // ...executes it:
+    FILE *pipe = popen(input, "r");
+    // ...and prints its output to the console and to `file`:
+    if(pipe != NULL && file != NULL){
+        char *line = NULL;
+        size_t len = 0;
+        ssize_t read;
+        while((read = getline(&line, &len, pipe)) != -1)
+        {
+            printf("%s", line);
+            fprintf(file, "%s", line);
+            line_count++;
+        }
+    }
+    // TODO:
+    //free(input);
+    //pclose(pipe);
 }
 
 
@@ -80,9 +119,8 @@ char *retrieve_user_input()
 // ------------------- falling chars helper functions -----------------------
 // --------------------------------------------------------------------------
 
-
 // Reads in the content of the file with the passed filename and prints it 
-// to the screen.
+// to the screen. Assumes that the program is currently in ncurses mode.
 void print_file_to_screen(const char *filename)
 {
     FILE *textfile;
@@ -94,6 +132,7 @@ void print_file_to_screen(const char *filename)
         while((read = getline(&line, &len, textfile)) != -1)
             printw("%s", line);
     }
+    refresh();
 }
 
 
@@ -133,6 +172,7 @@ void get_n_rand_numbers(unsigned n, unsigned *rand_numbers)
 // Also does some additional checks which help to ensure that after a few 
 // iterations all chars are either at the bottom of the window or on a stack
 // at the bottom of the window.
+// Assumes that the program is currently in ncurses mode.
 void let_char_fall_down(Pos_tuple *char_pos)
 {
     if(not char_pos->can_still_fall_down)
@@ -172,21 +212,53 @@ void let_char_fall_down(Pos_tuple *char_pos)
 }
 
 
-int main(int argc, char *argv[])
+int main()
 {
-    print_current_prompt();
-    printf("%s\n", retrieve_user_input());
-    getchar(); // So that the abovely generated output is visible
-               // before the ncurses mode is started.
+    // Clear the console so that only new output is still visible:
+    system("clear");
     
+    // Collect some console in- and output. While doing so, simulate a "normal"
+    // console environment:
     initscr(); // Start ncurses mode
-    
-    const char *filename = "test_file.txt";
     width = getmaxx(stdscr); // = number of columns
     height = getmaxy(stdscr);
-    std::vector<Pos_tuple> char_positions;
+    // Temporary leave ncurses mode:
+    def_prog_mode(); // Save the current terminal content
+    endwin();
     
-    print_file_to_screen(filename);
+    unsigned max_lines = height / 3;
+    /*
+    printf("height = %d\n", height);
+    printf("width = %d\n", width);
+    printf("max_lines = %d\n", max_lines);
+    */
+    
+    std::string output_file_path_cpp = "test_output.txt";
+    // Convert output file path from std::string to (char *) since fprintf
+    // needs (char *):
+    const char *output_file_path = output_file_path_cpp.c_str();
+    FILE *output_file = fopen(output_file_path, "w");
+    
+    print_current_prompt(output_file);
+    
+    while(line_count < max_lines)
+    {
+        read_and_execute_input(output_file);
+        print_current_prompt(output_file);
+    }
+    // So that this file can be opened again in read mode:
+    fclose(output_file);
+    
+    // Go back to ncurses mode, print the collected console in- and output
+    // to the screen, freeze it and let each char fall down char after char:
+    reset_prog_mode(); // Restore the saved terminal content
+    refresh();
+    
+    std::vector<Pos_tuple> char_positions;
+    print_file_to_screen(output_file_path);
+    
+    //getch();
+    //endwin();
     
     unsigned i = 0, j = 0;
     // Collect all chars on the current window that are not ' ':
