@@ -62,7 +62,17 @@ void print_current_prompt()
     std::string cwd_cpp = std::regex_replace(absolute_cwd, home_dir_regex, "~");
     const char *relative_cwd = cwd_cpp.c_str();
     
-    printf("%s@%s %s $\n", username, hostname, relative_cwd);
+    printf("%s@%s %s $ ", username, hostname, relative_cwd);
+}
+
+
+// Waits for the user to type some console input and returns those input
+// as string (char array).
+char *retrieve_user_input()
+{
+    char *input = (char *) malloc(ARG_MAX);
+    fgets(input, ARG_MAX, stdin);
+    return input;
 }
 
 
@@ -164,10 +174,10 @@ void let_char_fall_down(Pos_tuple *char_pos)
 
 int main(int argc, char *argv[])
 {
-    // Test output:
-    printf("The current bash prompt:\n");
     print_current_prompt();
-    getchar();
+    printf("%s\n", retrieve_user_input());
+    getchar(); // So that the abovely generated output is visible
+               // before the ncurses mode is started.
     
     initscr(); // Start ncurses mode
     
