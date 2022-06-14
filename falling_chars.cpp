@@ -227,17 +227,11 @@ int main()
     initscr(); // Start ncurses mode
     width = getmaxx(stdscr); // = number of columns
     height = getmaxy(stdscr);
-    // Temporary leave ncurses mode:
+    // Temporarily leave ncurses mode:
     def_prog_mode(); // Save the current terminal content
     endwin();
     
     unsigned max_lines = height / 3;
-    /*
-    printf("height = %d\n", height);
-    printf("width = %d\n", width);
-    printf("max_lines = %d\n", max_lines);
-    */
-    
     std::string output_file_path_cpp = "test_output.txt";
     // Convert output file path from std::string to (char *) since fprintf
     // needs (char *):
@@ -245,7 +239,6 @@ int main()
     FILE *output_file = fopen(output_file_path, "w");
     
     print_current_prompt(output_file);
-    
     while(line_count < max_lines)
     {
         read_and_execute_console_input(output_file);
@@ -264,9 +257,6 @@ int main()
     std::vector<Pos_tuple> char_positions;
     print_file_to_screen(output_file_path);
     
-    //getch();
-    //endwin();
-    
     unsigned i = 0, j = 0;
     // Collect all chars on the current window that are not ' ':
     for(; i < width; i++)
@@ -277,7 +267,6 @@ int main()
             if(c != ' ')
             {
                 Pos_tuple tuple = {i, j, c};
-                //column.push_back(tuple);
                 char_positions.push_back(tuple);
             }
         }
@@ -288,40 +277,11 @@ int main()
     // Let the collected chars fall down until all chars reached either the
     // bottom of the window or the top of a stack at the bottom of the window:
     while(cannot_fall_down_count < char_positions.size())
-    {
         for(i = 0; i < char_positions.size(); i++)
             let_char_fall_down(&char_positions[n_rand_numbers[i]]);
-        /*
-        // Debug output:
-        getch();
-        refresh();
-        def_prog_mode();
-        endwin();
-        // NOTE: The current values are (strangely) always from the last loop pass:
-        printf("cannot_fall_down_count = %d\n", cannot_fall_down_count);
-        printf("char_positions.size() = %ld\n", char_positions.size());
-        for(j = 0; j < char_positions.size(); j++){
-            printf("char_positions[%d].can_still_fall_down = %s\n", j, char_positions[j].can_still_fall_down ? "true" : "false");
-            printf("char_positions[%d].x = %d\n", j, char_positions[j].x);
-            printf("char_positions[%d].y = %d\n\n", j, char_positions[j].y);
-        }
-        for(j = 0; j < 3; j++)
-            printf("--------------------\n");
-        getchar();
-        reset_prog_mode();
-        refresh();
-        */
-    }
     
-    /*
-    // Debug output:
-    def_prog_mode();
-    endwin();
-    printf("Going now into pause() mode");
-    getchar();
-    reset_prog_mode();
-    refresh();
-    */
+    // The following lines of code are currently never executed due to a bug 
+    // described in README.md:
     pause(); // Sleep forever, e.g. until Ctrl. + C is activated.
     // Will be never executed since the program is terminated before
     // using Ctrl. + C:
