@@ -27,7 +27,7 @@
 #include <vector> // for std::vector
 
 // Derived from the NAME_REGEX definition from /usr/share/adduser/adduser.conf:
-#define NAME_REGEX = "^[a-z][-a-z0-9_]*"
+#define NAME_REGEX "^[a-z][-a-z0-9_]*"
 #define SLEEP usleep(9000)
 //#define SLEEP usleep(60000)
 //#define SLEEP usleep(2000)
@@ -58,7 +58,7 @@ void print_current_prompt()
     gethostname(hostname, HOST_NAME_MAX);
     char *absolute_cwd = (char *) malloc(PATH_MAX);
     getcwd(absolute_cwd, PATH_MAX);
-    std::regex home_dir_regex("/home/[a-zA-Z]*");
+    std::regex home_dir_regex(NAME_REGEX);
     std::string cwd_cpp = std::regex_replace(absolute_cwd, home_dir_regex, "~");
     const char *relative_cwd = cwd_cpp.c_str();
     
