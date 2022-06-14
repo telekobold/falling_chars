@@ -14,6 +14,7 @@
  * SOFTWARE.
  */
 
+// In C++, unlike C, some imports are not necessary:
 //#include <stdio.h> // for printf()
 //#include <stdlib.h> // for malloc()
 #include <unistd.h> // for getlogin(), gethostname(), getcwd()
@@ -54,17 +55,20 @@ unsigned cannot_fall_down_count = 0;
 // working directory and returns a corresponding unix console prompt.
 std::string get_current_prompt()
 {
-    // getlogin() returns the string as (char *) and must be converted:
+    // getlogin() returns the string as (char *) and must be converted
+    // to std::string:
     std::string username = std::string(getlogin());
-    // gethostname needs a (char *), so the hostname must be converted to 
-    // std::string afterwards:
+    // gethostname() needs a (char *), so the host name must be converted to 
+    // std::string after calling gethostname():
     char *hostname_c = (char *) malloc(HOST_NAME_MAX);
     gethostname(hostname_c, HOST_NAME_MAX);
     std::string hostname = std::string(hostname_c);
+    free(hostname_c);
     char *absolute_cwd = (char *) malloc(PATH_MAX);
     getcwd(absolute_cwd, PATH_MAX);
     std::regex home_dir_regex(HOME_DIR_REGEX);
     std::string relative_cwd = std::regex_replace(absolute_cwd, home_dir_regex, "~");
+    free(absolute_cwd);
     
     return username + "@" + hostname + " " + relative_cwd + " $ ";
 }
@@ -85,9 +89,9 @@ void print_current_prompt(FILE *file)
 
 
 // Reads a command from the console, writes it to the passed file, executes it 
-// and prints its output to the console and to the passed file. Assumes that 
-// `file` is properly initialized.
-void read_and_execute_input(FILE *file)
+// and prints the command's output to the console and to the passed file. 
+// Assumes that `file` is properly initialized.
+void read_and_execute_console_input(FILE *file)
 {
     char *input = (char *) malloc(ARG_MAX);
     // Reads a command from the console:
@@ -109,9 +113,8 @@ void read_and_execute_input(FILE *file)
             line_count++;
         }
     }
-    // TODO:
-    //free(input);
-    //pclose(pipe);
+    pclose(pipe);
+    free(input);
 }
 
 
@@ -136,7 +139,7 @@ void print_file_to_screen(const char *filename)
 }
 
 
-// Returns 1 if numbers contains number, 0 otherwise.
+// Returns 1 if `numbers` contains `number`, 0 otherwise.
 unsigned contains(const unsigned *numbers, const unsigned numbers_size, const unsigned number)
 {
     for(unsigned i = 0; i < numbers_size; i++)
@@ -172,7 +175,8 @@ void get_n_rand_numbers(unsigned n, unsigned *rand_numbers)
 // Also does some additional checks which help to ensure that after a few 
 // iterations all chars are either at the bottom of the window or on a stack
 // at the bottom of the window.
-// Assumes that the program is currently in ncurses mode.
+// Assumes that the program is currently in ncurses mode and that `char_pos`
+// is properly initialized.
 void let_char_fall_down(Pos_tuple *char_pos)
 {
     if(not char_pos->can_still_fall_down)
@@ -217,8 +221,9 @@ int main()
     // Clear the console so that only new output is still visible:
     system("clear");
     
-    // Collect some console in- and output. While doing so, simulate a "normal"
-    // console environment:
+    // ------ Collect some console in- and output. While doing so, ------
+    // ------------ simulate a "normal" console environment: ------------
+    
     initscr(); // Start ncurses mode
     width = getmaxx(stdscr); // = number of columns
     height = getmaxy(stdscr);
@@ -243,14 +248,16 @@ int main()
     
     while(line_count < max_lines)
     {
-        read_and_execute_input(output_file);
+        read_and_execute_console_input(output_file);
         print_current_prompt(output_file);
     }
     // So that this file can be opened again in read mode:
     fclose(output_file);
     
-    // Go back to ncurses mode, print the collected console in- and output
-    // to the screen, freeze it and let each char fall down char after char:
+    // ------ Go back to ncurses mode, print the collected console ------
+    // ------------- in- and output to the screen, freeze it ------------
+    // ----------- and let each char fall down char after char: ---------
+    
     reset_prog_mode(); // Restore the saved terminal content
     refresh();
     
